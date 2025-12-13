@@ -1,89 +1,75 @@
 import streamlit as st
 import re
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="Partika News Rewriter",
-    page_icon="📰",
-    layout="wide"
-)
+st.set_page_config(page_title="Partika News Rewriter", page_icon="📰", layout="wide")
 
 st.markdown("<h1 style='text-align:center;'>📰 Partika News Rewriter</h1>", unsafe_allow_html=True)
-st.caption("Rule-based Heading + Subheading + Akhbaari Body | No AI")
+st.caption("Rule-based Editorial Tool (Max Possible Without AI)")
 st.divider()
 
-REMOVE_PHRASES = [
-    "दरअसल", "वास्तव में", "आपको बता दें", "गौरतलब है कि",
-    "सूत्रों के अनुसार", "जानकारी के अनुसार"
-]
+GRAMMAR_FIXES = {
+    "बढ़ती फूड कल्चर": "बदलता फूड कल्चर",
+    "ही शहर के": "शहर के",
+    "कर रहा है": "किया जा रहा है",
+    "कर रही है": "की जा रही है",
+}
 
-def clean_text(text):
-    text = re.sub(r'\s+', ' ', text.strip())
-    for p in REMOVE_PHRASES:
-        text = text.replace(p, "")
+def apply_grammar_fixes(text):
+    for wrong, right in GRAMMAR_FIXES.items():
+        text = text.replace(wrong, right)
     return text
 
-def split_sentences(text):
-    return re.split(r'(?<=[।!?])\s+', text)
+def clean_lines(text):
+    lines = [l.strip("–- ") for l in text.split("\n") if l.strip()]
+    return list(dict.fromkeys(lines))  # remove duplicates
 
-def generate_headline(sentences):
-    if not sentences:
-        return ""
-    headline = sentences[0]
-    headline = re.sub(r'(है|था|थी|हुए|किया|किए)$', '', headline)
-    words = headline.split()
-    return " ".join(words[:10])
+def generate_headline(lines):
+    base = lines[0]
+    base = re.sub(r"(ने|का|की|के|है|थे).*", "", base)
+    words = base.split()
+    return " ".join(words[:8])
 
-def generate_subheading(sentences):
-    if len(sentences) > 1:
-        return sentences[1]
-    return ""
+def rewrite(raw):
+    lines = clean_lines(raw)
+    lines = [apply_grammar_fixes(l) for l in lines]
 
-def build_body(sentences):
+    headline = generate_headline(lines)
+    subheading = lines[1] if len(lines) > 1 else ""
+
+    body_sentences = []
+    for line in lines[2:]:
+        body_sentences += re.split(r'(?<=[।])\s+', line)
+
     body = []
     para = []
-    for s in sentences[2:]:
+    for s in body_sentences:
         para.append(s)
         if len(para) == 2:
             body.append(" ".join(para))
             para = []
     if para:
         body.append(" ".join(para))
-    return "\n\n".join(body)
 
-def rewrite_news(raw):
-    cleaned = clean_text(raw)
-    sentences = split_sentences(cleaned)
+    return headline, subheading, "\n\n".join(body)
 
-    headline = generate_headline(sentences)
-    subheading = generate_subheading(sentences)
-    body = build_body(sentences)
-
-    return headline, subheading, body
-
-# ---------------- UI ----------------
 left, right = st.columns(2, gap="large")
 
 with left:
-    st.subheader("✍️ Raw Reporter Copy")
-    raw_news = st.text_area("", height=380, placeholder="Reporter se aayi raw news paste karein...")
+    raw = st.text_area("✍️ Raw Reporter Copy", height=380)
 
 with right:
-    st.subheader("📰 Akhbaar Output")
-    headline_box = st.empty()
-    subheading_box = st.empty()
+    h_box = st.empty()
+    sh_box = st.empty()
     body_box = st.empty()
 
 if st.button("🔄 Rewrite for Akhbaar", use_container_width=True):
-    if raw_news.strip() == "":
-        st.warning("कृपया खबर paste करें।")
-    else:
-        h, sh, body = rewrite_news(raw_news)
-
-        headline_box.markdown(f"## {h}")
-        if sh:
-            subheading_box.markdown(f"**{sh}**")
+    if raw.strip():
+        h, sh, body = rewrite(raw)
+        h_box.markdown(f"## {h}")
+        sh_box.markdown(f"**{sh}**")
         body_box.markdown(body)
+    else:
+        st.warning("कृपया खबर paste करें।")
 
 st.divider()
-st.caption("© Editorial Desk Tool | Rule-based | No AI")
+st.caption("Editorial Desk Tool | No AI | Rule-based")
