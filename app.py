@@ -1,20 +1,11 @@
-# file: app.py
 import streamlit as st
-import os
-from dotenv import load_dotenv
 from openai import OpenAI
 
-# ----------------- LOAD API KEY -----------------
-load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
-
-if not api_key:
-    st.error("❌ OpenAI API key missing. .env check karo")
-    st.stop()
-
+# ----------------- API KEY (Streamlit Secrets) -----------------
+api_key = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=api_key)
 
-# ----------------- STREAMLIT UI -----------------
+# ----------------- PAGE CONFIG -----------------
 st.set_page_config(
     page_title="Patrika AI News Desk",
     layout="wide"
@@ -23,12 +14,19 @@ st.set_page_config(
 st.title("📰 Patrika AI News Rewriter")
 st.caption("AI-powered Hindi Journalism Assistant")
 
+# ----------------- CONTROLS -----------------
 col1, col2 = st.columns(2)
 
 with col1:
     tone = st.selectbox(
         "✍ Writing Style",
-        ["Neutral News", "Breaking News", "Investigative", "Editorial", "SEO Friendly"]
+        [
+            "Neutral News",
+            "Breaking News",
+            "Investigative",
+            "Editorial",
+            "SEO Friendly"
+        ]
     )
 
 with col2:
@@ -39,32 +37,32 @@ with col2:
 
 news_text = st.text_area(
     "📝 Paste original news here",
-    height=250
+    height=280
 )
 
 # ----------------- AI REWRITE -----------------
 if st.button("🚀 Rewrite with AI"):
     if not news_text.strip():
-        st.warning("Text paste karo bhai 🙂")
+        st.warning("❗ Bhai, pehle news paste karo")
     else:
-        with st.spinner("AI Patrika Desk working..."):
+        with st.spinner("🧠 Patrika AI Desk working..."):
             try:
                 prompt = f"""
 Tum Rajasthan Patrika ke senior Hindi editor ho.
 
-Task:
-- News ko bilkul naya likho
-- Facts same rakho
-- Language: Shuddh, professional Hindi
+Rules:
+- Facts same rahen
+- Bilkul naya likho
+- Shuddh, professional Hindi
 - Style: {tone}
 - Length: {length}
+- Headline + Article do
 - Plagiarism free
-- Headline bhi do
 
 Original News:
 \"\"\"{news_text}\"\"\"
 
-Output format:
+Output Format:
 Headline:
 <Headline>
 
@@ -75,17 +73,21 @@ Article:
                 response = client.chat.completions.create(
                     model="gpt-4.1-mini",
                     messages=[
-                        {"role": "system", "content": "You are a professional Hindi news editor."},
-                        {"role": "user", "content": prompt}
+                        {
+                            "role": "system",
+                            "content": "You are a professional Hindi news editor."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
                     ],
                     temperature=0.7,
                     max_tokens=900
                 )
 
-                result = response.choices[0].message.content
-
                 st.subheader("📰 AI Rewritten News")
-                st.write(result)
+                st.write(response.choices[0].message.content)
 
             except Exception as e:
                 st.error(f"❌ Error: {e}")
