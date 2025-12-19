@@ -1,10 +1,6 @@
 import streamlit as st
 from openai import OpenAI
 
-# ----------------- API KEY (Streamlit Secrets) -----------------
-api_key = st.secrets["OPENAI_API_KEY"]
-client = OpenAI(api_key=api_key)
-
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(
     page_title="Patrika AI News Desk",
@@ -13,6 +9,15 @@ st.set_page_config(
 
 st.title("📰 Patrika AI News Rewriter")
 st.caption("AI-powered Hindi Journalism Assistant")
+
+# ----------------- API KEY CHECK -----------------
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("❌ OPENAI_API_KEY Streamlit Secrets me set nahi hai")
+    st.stop()
+
+# IMPORTANT:
+# sk-proj keys ke liye ye HI correct method hai
+client = OpenAI()   # auto-reads OPENAI_API_KEY from secrets
 
 # ----------------- CONTROLS -----------------
 col1, col2 = st.columns(2)
@@ -37,32 +42,32 @@ with col2:
 
 news_text = st.text_area(
     "📝 Paste original news here",
-    height=280
+    height=300
 )
 
 # ----------------- AI REWRITE -----------------
 if st.button("🚀 Rewrite with AI"):
     if not news_text.strip():
-        st.warning("❗ Bhai, pehle news paste karo")
+        st.warning("❗ Bhai pehle news paste karo")
     else:
-        with st.spinner("🧠 Patrika AI Desk working..."):
+        with st.spinner("🧠 Patrika AI Desk kaam kar raha hai..."):
             try:
                 prompt = f"""
 Tum Rajasthan Patrika ke senior Hindi editor ho.
 
 Rules:
-- Facts same rahen
-- Bilkul naya likho
-- Shuddh, professional Hindi
+- Facts bilkul same rahen
+- Language: shuddh, professional Hindi
 - Style: {tone}
 - Length: {length}
 - Headline + Article do
 - Plagiarism free
+- News publishing ready ho
 
 Original News:
 \"\"\"{news_text}\"\"\"
 
-Output Format:
+Output format:
 Headline:
 <Headline>
 
@@ -90,12 +95,13 @@ Article:
                 st.write(response.choices[0].message.content)
 
             except Exception as e:
-                st.error(f"❌ Error: {e}")
+                st.error(f"❌ OpenAI Error: {e}")
 
 # ----------------- API KEY TEST -----------------
+st.divider()
 if st.button("🔑 Test API Key"):
     try:
         client.models.list()
         st.success("✅ API key valid & working")
     except Exception as e:
-        st.error(f"❌ API issue: {e}")
+        st.error(f"❌ API key issue: {e}")
